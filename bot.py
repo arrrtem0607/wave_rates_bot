@@ -53,21 +53,21 @@ async def handle_currency_message(message: Message):
     if message.from_user.id != TARGET_USER_ID or not rate_cache.get("requested"):
         return
 
-    lines = message.text.strip().splitlines()
-    if len(lines) != 2:
-        await message.reply("❌ Введите два курса — USD и CNY — в отдельных строках.")
-        return
-
     try:
-        # Пользователь вводит с наценкой
-        usd_markup = Decimal(lines[0].replace(",", "."))
-        cny_markup = Decimal(lines[1].replace(",", "."))
+        # Извлекаем числа из текста
+        raw_text = message.text.replace(",", ".")
+        parts = [Decimal(p) for p in raw_text.replace("\n", " ").split() if p.replace('.', '', 1).isdigit()]
+
+        if len(parts) != 2:
+            await message.reply("❌ Неверный формат. Введите два курса — например:\n<code>93.15 12.85</code>")
+            return
+
+        usd_markup, cny_markup = max(parts), min(parts)
 
         # Пересчитываем базовые курсы
         usd_base = (usd_markup - Decimal("1.00")).quantize(Decimal("0.0001"))
         cny_base = (cny_markup / Decimal("1.02")).quantize(Decimal("0.0001"))
 
-        # Обновляем кэш
         rate_cache.update({
             "usd": usd_base,
             "cny": cny_base,
@@ -84,25 +84,23 @@ async def handle_currency_message(message: Message):
 
         logger.info("💾 Курсы успешно сохранены")
 
-        # Отправляем С ИСХОДНЫМИ ЗНАЧЕНИЯМИ (то есть с наценкой)
         await bot.send_message(
             MANAGER_CHAT_ID,
             f"<b>📊 Курсы на {date.today().strftime('%d.%m.%Y')}:</b>\n\n"
             f"🇺🇸 USD: <b>{usd_markup:.2f}₽</b>\n"
-            f"🇨🇳 CNY: <b>{cny_markup:.4f}₽</b>"
+            f"🇨🇳 CNY: <b>{cny_markup:.2f}₽</b>"
         )
 
         await message.reply("✅ Курсы получены и сохранены.")
     except Exception as e:
         logger.warning(f"Ошибка обработки курсов: {e}")
-        await message.reply("❌ Ошибка. Убедитесь, что формат — два числа, каждая на новой строке.")
-
+        await message.reply("❌ Ошибка. Убедитесь, что введены два корректных числа.")
 
 # --- Entry point ---
 
 async def main():
-    scheduler.add_job(request_currency_inputs, CronTrigger(hour=1, minute=9))
-    scheduler.add_job(check_repeat_request, CronTrigger(hour=1, minute=10))
+    scheduler.add_job(request_currency_inputs, CronTrigger(hour=1, minute=17))
+    scheduler.add_job(check_repeat_request, CronTrigger(hour=1, minute=18))
     scheduler.start()
 
     logger.info("🚀 Бот запущен и готов принимать сообщения")
