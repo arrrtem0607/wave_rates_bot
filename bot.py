@@ -1,10 +1,11 @@
 import os
-import random
+import asyncio
 from datetime import date
 from decimal import Decimal
-
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
+from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
@@ -13,148 +14,99 @@ from database import get_session
 from controllers import CurrencyController
 from logger import setup_logger
 
-# --- Setup ---
-
 load_dotenv()
-logger = setup_logger(__name__, level="WARNING")
+logger = setup_logger(__name__, level="INFO")
 
-bot = Bot(token=os.getenv("BOT_TOKEN"))
+bot = Bot(
+    token=os.getenv("BOT_TOKEN"),
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher()
+scheduler = AsyncIOScheduler()
 
-ALLOWED_USERS = [int(id) for id in os.getenv("ALLOWED_USERS", "").split(",") if id]
-TARGET_GROUP_ID = int(os.getenv("TARGET_GROUP_ID"))
-rate_messages = {}
+TARGET_USER_ID = int(os.getenv("TARGET_USER_ID"))
+MANAGER_CHAT_ID = int(os.getenv("MANAGER_CHAT_ID"))
 
-# --- Utils ---
+rate_cache = {"requested": False}
 
-def is_allowed_user(user_id: int) -> bool:
-    return user_id in ALLOWED_USERS
-
-# --- Task: send requests ---
+# --- Tasks ---
 
 async def request_currency_inputs():
-    """Send messages requesting currency rates"""
     try:
-        ust_msg = await bot.send_message(TARGET_GROUP_ID, "Введите курс UST/RUB на сегодня")
-        cny_msg = await bot.send_message(TARGET_GROUP_ID, "Введите курс CNY/RUB на сегодня")
-
-        rate_messages["ust"] = ust_msg.message_id
-        rate_messages["cny"] = cny_msg.message_id
-
-        logger.info("📩 Сообщения для ввода курса отправлены в группу")
-
+        await bot.send_message(TARGET_USER_ID,
+            "📥 Введите курс валют (USD и CNY) в две строки, с учётом вашей наценки:\n\n"
+            "Пример:\n<code>93.15\n12.85</code>")
+        rate_cache["requested"] = True
+        logger.info("📩 Запрошены курсы у пользователя")
     except Exception as e:
-        logger.error(f"❌ Ошибка при отправке сообщений в Telegram: {e}")
+        logger.error(f"❌ Ошибка при отправке сообщения: {e}")
 
-# --- Message handler ---
+async def check_repeat_request():
+    if not rate_cache.get("usd") or not rate_cache.get("cny"):
+        logger.info("🔁 Повторный запрос курсов в 12:00")
+        await request_currency_inputs()
 
-@dp.message()
-async def handle_message(message: Message):
-    logger.info(f"📩 Получено сообщение от user_id={message.from_user.id}: {message.text}")
+# --- Handlers ---
 
-    if not message.reply_to_message:
-        logger.info("↩️ Нет reply_to_message — сообщение пропущено")
+@dp.message(F.text)
+async def handle_currency_message(message: Message):
+    if message.from_user.id != TARGET_USER_ID or not rate_cache.get("requested"):
         return
 
-    logger.info(f"🔁 Reply to message_id={message.reply_to_message.message_id}")
-    logger.info(f"🧠 В памяти: UST={rate_messages.get('ust')}, CNY={rate_messages.get('cny')}")
-
-    if message.reply_to_message.message_id not in rate_messages.values():
-        logger.info("❌ reply_to_message.message_id не совпадает с ожидаемыми ID")
-        return
-
-    if not is_allowed_user(message.from_user.id):
-        await message.reply(random.choice([
-            "Курсы может отправить только Макс 💼",
-            "Я вообще-то у Максима спросил 🤔",
-            "Жду ответ только от Максима, как всегда 😏",
-            "Максим, ты где? Опять перепоручил?",
-            "Это в компетенции только Макса 👔",
-            "Курсы — это серьёзно. Максим, выведите ситуацию!"
-        ]))
-        logger.warning(f"⛔️ Неавторизованный пользователь {message.from_user.id} попытался ввести курс")
+    lines = message.text.strip().splitlines()
+    if len(lines) != 2:
+        await message.reply("❌ Введите два курса — USD и CNY — в отдельных строках.")
         return
 
     try:
-        rate = Decimal(message.text.replace(",", "."))
-    except Exception:
-        logger.warning(f"❗ Не удалось распарсить число: {message.text}")
-        await message.reply("Пожалуйста, введите корректное число")
-        return
+        # Пользователь вводит с наценкой
+        usd_markup = Decimal(lines[0].replace(",", "."))
+        cny_markup = Decimal(lines[1].replace(",", "."))
 
-    async with get_session() as session:
-        controller = CurrencyController(session)
+        # Пересчитываем базовые курсы
+        usd_base = (usd_markup - Decimal("1.00")).quantize(Decimal("0.0001"))
+        cny_base = (cny_markup / Decimal("1.02")).quantize(Decimal("0.0001"))
 
-        if message.reply_to_message.message_id == rate_messages.get("ust"):
-            rate_messages["ust_value"] = float(rate)
-            logger.info(f"💾 Получен курс UST: {rate}")
-        elif message.reply_to_message.message_id == rate_messages.get("cny"):
-            rate_messages["cny_value"] = float(rate)
-            logger.info(f"💾 Получен курс CNY: {rate}")
+        # Обновляем кэш
+        rate_cache.update({
+            "usd": usd_base,
+            "cny": cny_base,
+            "requested": False
+        })
 
-        # Мемный ответ, если только один курс введён
-        if (
-            ("ust_value" in rate_messages and "cny_value" not in rate_messages) or
-            ("cny_value" in rate_messages and "ust_value" not in rate_messages)
-        ):
-            await message.reply(random.choice([
-                "Отлично! Осталось ввести второй курс 💹",
-                "Жду второй курс... не тяни как Минфин с бюджетом 🕰️",
-                "Курс один — не курс. Максим, добавь ещё цифру 📊",
-                "Хорошее начало. А теперь второй курс, и будет вам экономика 😎",
-                "Половину дела сделал — теперь доделай 💼"
-            ]))
+        async with get_session() as session:
+            controller = CurrencyController(session)
+            await controller.add_rates(
+                ust=float(usd_base),
+                cny=float(cny_base),
+                date=date.today()
+            )
 
-        # Если оба курса введены — сохраняем
-        if "ust_value" in rate_messages and "cny_value" in rate_messages:
-            try:
-                existing = await controller.get_rates_by_date(date.today())
-                if existing:
-                    await message.reply(random.choice([
-                        "Курсы на сегодня уже в базе 📚",
-                        "Уже всё записано — вы опоздали на совещание 😅",
-                        "Дважды одну и ту же экономику не спасают 💰",
-                        "Сегодняшние курсы уже были занесены ✍️"
-                    ]))
-                    logger.warning("⚠️ Попытка повторной записи на ту же дату")
-                    return
+        logger.info("💾 Курсы успешно сохранены")
 
-                await controller.add_rates(
-                    ust=rate_messages["ust_value"],
-                    cny=rate_messages["cny_value"],
-                    date=date.today()
-                )
+        # Отправляем С ИСХОДНЫМИ ЗНАЧЕНИЯМИ (то есть с наценкой)
+        await bot.send_message(
+            MANAGER_CHAT_ID,
+            f"<b>📊 Курсы на {date.today().strftime('%d.%m.%Y')}:</b>\n\n"
+            f"🇺🇸 USD: <b>{usd_markup:.2f}₽</b>\n"
+            f"🇨🇳 CNY: <b>{cny_markup:.4f}₽</b>"
+        )
 
-                await message.reply(random.choice([
-                    f"Курсы на {date.today()} успешно записаны 📈",
-                    f"Максим передал — зафиксировали ✅",
-                    f"По курсам всё чётко, как всегда 👍",
-                    f"Готово. Экономика может спать спокойно 😎",
-                    f"Сохранил. Центробанк может отдыхать 🏦",
-                    f"Спасибо, Максим. Всё под контролем 📊"
-                ]))
+        await message.reply("✅ Курсы получены и сохранены.")
+    except Exception as e:
+        logger.warning(f"Ошибка обработки курсов: {e}")
+        await message.reply("❌ Ошибка. Убедитесь, что формат — два числа, каждая на новой строке.")
 
-                logger.info("✅ Курсы сохранены в БД. Очистка состояния.")
-                rate_messages.clear()
-            except Exception as e:
-                logger.error(f"❌ Ошибка при сохранении курсов: {e}")
-                await message.reply("Произошла ошибка при сохранении курсов")
 
-# --- Main loop ---
+# --- Entry point ---
 
 async def main():
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        request_currency_inputs,
-        CronTrigger(hour=16, minute=26, timezone="Europe/Moscow")
-    )
+    scheduler.add_job(request_currency_inputs, CronTrigger(hour=1, minute=9))
+    scheduler.add_job(check_repeat_request, CronTrigger(hour=1, minute=10))
     scheduler.start()
 
-    logger.info("🚀 Бот запущен и слушает обновления...")
+    logger.info("🚀 Бот запущен и готов принимать сообщения")
     await dp.start_polling(bot)
 
-# --- Entry ---
-
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
