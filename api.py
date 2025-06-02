@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from datetime import date
-from typing import Optional, List
+from typing import Optional, List, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -9,6 +9,9 @@ from controllers import CurrencyController
 
 app = FastAPI(title="Currency Rates API")
 
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    async with get_session() as session:
+        yield session
 
 class CurrencyRatesResponse(BaseModel):
     date: date
@@ -22,7 +25,7 @@ class CurrencyRatesResponse(BaseModel):
 
 
 @app.get("/rates/today", response_model=CurrencyRatesResponse)
-async def get_today_rates(session: AsyncSession = Depends(get_session)):
+async def get_today_rates(session: AsyncSession = Depends(get_db_session)):
     today = date.today()
     controller = CurrencyController(session)
     rates = await controller.get_rates_by_date(today)
@@ -42,7 +45,7 @@ async def get_today_rates(session: AsyncSession = Depends(get_session)):
 @app.get("/rates/{date_str}", response_model=CurrencyRatesResponse)
 async def get_rates_by_date(
     date_str: str,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_db_session)
 ):
     try:
         target_date = date.fromisoformat(date_str)
@@ -68,7 +71,7 @@ async def get_rates_by_date(
 async def get_rates_range(
     from_date: Optional[date] = Query(None),
     to_date: Optional[date] = Query(None),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_db_session)
 ):
     controller = CurrencyController(session)
     result = await controller.get_rates_range(from_date, to_date)
