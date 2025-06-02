@@ -1,3 +1,4 @@
+from typing import Optional
 from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,10 +9,9 @@ class CurrencyController:
         self.session = session
 
     async def add_rates(self, ust: float, cny: float, date: date) -> CurrencyRates:
-        # Convert to smallest units
         ust_cents = int(ust * 100)
         cny_fens = int(cny * 100)
-        
+
         # Calculate additional values
         ust_plus1_cents = int((ust + 1) * 100)
         cny_plus2p_fens = int((cny * 1.02) * 100)
@@ -32,4 +32,14 @@ class CurrencyController:
     async def get_rates_by_date(self, date: date) -> CurrencyRates | None:
         query = select(CurrencyRates).where(CurrencyRates.date == date)
         result = await self.session.execute(query)
-        return result.scalar_one_or_none() 
+        return result.scalar_one_or_none()
+
+    async def get_rates_range(self, from_date: Optional[date], to_date: Optional[date]):
+        query = select(CurrencyRates)
+        if from_date:
+            query = query.where(CurrencyRates.date >= from_date)
+        if to_date:
+            query = query.where(CurrencyRates.date <= to_date)
+        query = query.order_by(CurrencyRates.date)
+        result = await self.session.execute(query)
+        return result.scalars().all()
