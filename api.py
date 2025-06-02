@@ -2,11 +2,13 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from datetime import date
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import get_session
-from controllers import CurrencyController
 from pydantic import BaseModel
 
+from database import get_session
+from controllers import CurrencyController
+
 app = FastAPI(title="Currency Rates API")
+
 
 class CurrencyRatesResponse(BaseModel):
     date: date
