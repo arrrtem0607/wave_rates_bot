@@ -100,7 +100,7 @@ async def handle_currency_message(message: Message):
 
 async def main():
     scheduler.add_job(request_currency_inputs, CronTrigger(hour=10, minute=00))
-    scheduler.add_job(check_repeat_request, CronTrigger(hour=12, minute=00))
+    # scheduler.add_job(check_repeat_request, CronTrigger(hour=12, minute=00))
     scheduler.start()
 
     logger.info("🚀 Бот запущен и готов принимать сообщения")
