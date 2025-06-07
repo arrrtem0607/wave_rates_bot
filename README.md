@@ -10,6 +10,7 @@ Telegram bot for manual collection and storage of currency rates with API access
 - Automatic conversion to smallest units
 - FastAPI backend for rate retrieval
 - PostgreSQL storage
+- Ability to overwrite today's rates by sending them again
 
 ## Setup
 
@@ -74,6 +75,7 @@ Example response:
 2. Reply to these messages with the rates
 3. Only messages from `TARGET_USER_ID` sent in a private chat with the bot are processed
 4. After both rates are collected, they are automatically saved to the database
+5. Sending new rates again on the same day overwrites the previous values
 
 ## Security
 
