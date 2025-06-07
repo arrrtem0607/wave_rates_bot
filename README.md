@@ -71,11 +71,11 @@ Example response:
 1. The bot automatically sends two messages at 09:00 MSK on weekdays (Mon-Fri):
    - "Введите курс UST/RUB на сегодня"
    - "Введите курс CNY/RUB на сегодня"
-
-2. Reply to these messages with the rates
-3. Only messages from `TARGET_USER_ID` sent in a private chat with the bot are processed
-4. After both rates are collected, they are automatically saved to the database
-5. Sending new rates again on the same day overwrites the previous values
+2. If the rates are still not provided, the bot sends a reminder at 12:00 MSK on weekdays
+3. Reply to these messages with the rates
+4. Only messages from `TARGET_USER_ID` sent in a private chat with the bot are processed
+5. After both rates are collected, they are automatically saved to the database
+6. Sending new rates again on the same day overwrites the previous values
 
 ## Security
 

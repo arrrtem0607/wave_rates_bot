@@ -42,7 +42,11 @@ async def request_currency_inputs():
         logger.error(f"❌ Ошибка при отправке сообщения: {e}")
 
 async def check_repeat_request():
-    if not rate_cache.get("usd") or not rate_cache.get("cny"):
+    async with get_session() as session:
+        controller = CurrencyController(session)
+        rates = await controller.get_rates_by_date(date.today())
+
+    if rates is None:
         logger.info("🔁 Повторный запрос курсов в 12:00")
         await request_currency_inputs()
 
@@ -114,10 +118,10 @@ async def main():
         request_currency_inputs,
         CronTrigger(hour=10, minute=0, day_of_week="mon-fri"),
     )
-    # scheduler.add_job(
-    #     check_repeat_request,
-    #     CronTrigger(hour=12, minute=0, day_of_week="mon-fri"),
-    # )
+    scheduler.add_job(
+        check_repeat_request,
+        CronTrigger(hour=12, minute=0, day_of_week="mon-fri"),
+    )
     scheduler.start()
 
     logger.info("🚀 Бот запущен и готов принимать сообщения")
