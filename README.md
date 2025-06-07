@@ -47,6 +47,11 @@ Telegram bot for manual collection and storage of currency rates with API access
    python bot.py
    ```
 
+## Web Interface
+
+Open `http://localhost:8000/` in your browser after starting the API server.
+Select a date range and click **Load** to fetch rates via AJAX.
+
 ## API Usage
 
 ### Get Rates by Date

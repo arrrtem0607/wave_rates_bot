@@ -1,4 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from datetime import date
 from typing import Optional, List, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +11,8 @@ from database import get_session
 from controllers import CurrencyController
 
 app = FastAPI(title="Currency Rates API")
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with get_session() as session:
@@ -85,3 +90,8 @@ async def get_rates_range(
             "cny_rub_plus2p": r.cny_rub_plus2p_fens / 100
         } for r in result
     ]
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})

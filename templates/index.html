@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Currency Rates</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Currency Rates</h1>
+    <form id="range-form">
+        <label>From: <input type="date" id="from_date" name="from_date"></label>
+        <label>To: <input type="date" id="to_date" name="to_date"></label>
+        <button type="submit">Load</button>
+    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>USD/RUB</th>
+                <th>CNY/RUB</th>
+                <th>USD+1</th>
+                <th>CNY+2%</th>
+            </tr>
+        </thead>
+        <tbody id="rates-table-body">
+        </tbody>
+    </table>
+    <script src="/static/script.js"></script>
+</body>
+</html>
