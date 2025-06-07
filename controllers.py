@@ -16,6 +16,17 @@ class CurrencyController:
         ust_plus1_cents = int((ust + 1) * 100)
         cny_plus2p_fens = int((cny * 1.02) * 100)
 
+        existing = await self.get_rates_by_date(date)
+        if existing:
+            existing.ust_rub_cents = ust_cents
+            existing.cny_rub_fens = cny_fens
+            existing.ust_rub_plus1_cents = ust_plus1_cents
+            existing.cny_rub_plus2p_fens = cny_plus2p_fens
+
+            await self.session.commit()
+            await self.session.refresh(existing)
+            return existing
+
         rates = CurrencyRates(
             date=date,
             ust_rub_cents=ust_cents,
