@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
-from aiogram.enums import ParseMode
+from aiogram.enums import ParseMode, ChatType
 from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -50,7 +50,11 @@ async def check_repeat_request():
 
 @dp.message(F.text)
 async def handle_currency_message(message: Message):
-    if message.from_user.id != TARGET_USER_ID or not rate_cache.get("requested"):
+    if (
+        message.from_user.id != TARGET_USER_ID
+        or message.chat.type != ChatType.PRIVATE
+        or not rate_cache.get("requested")
+    ):
         return
 
     try:

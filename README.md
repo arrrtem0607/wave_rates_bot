@@ -71,8 +71,9 @@ Example response:
    - "Введите курс UST/RUB на сегодня"
    - "Введите курс CNY/RUB на сегодня"
 
-2. Reply to these messages with the rates (only allowed users can reply)
-3. After both rates are collected, they are automatically saved to the database
+2. Reply to these messages with the rates
+3. Only messages from `TARGET_USER_ID` sent in a private chat with the bot are processed
+4. After both rates are collected, they are automatically saved to the database
 
 ## Security
 
