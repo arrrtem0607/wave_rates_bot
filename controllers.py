@@ -59,3 +59,8 @@ class CurrencyController:
         query = query.order_by(CurrencyRates.date)
         result = await self.session.execute(query)
         return result.scalars().all()
+
+    async def get_latest_rate(self) -> CurrencyRates | None:
+        query = select(CurrencyRates).order_by(CurrencyRates.date.desc()).limit(1)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()

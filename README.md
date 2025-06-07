@@ -50,7 +50,9 @@ Telegram bot for manual collection and storage of currency rates with API access
 ## Web Interface
 
 Open `http://localhost:8000/` in your browser after starting the API server.
-Select a date range and click **Load** to fetch rates via AJAX.
+The page is in Russian and immediately shows rates for the last 7 days.
+The latest available rate is displayed above the form.
+Select another date range and click **Загрузить** to update the table.
 
 ## API Usage
 
@@ -86,4 +88,4 @@ Example response:
 
 - Only whitelisted users can reply to rate collection messages
 - API can be protected with API key (implementation required)
-- All monetary values are stored as integers (cents/fens) 
+- All monetary values are stored as integers (cents/fens)

@@ -2,20 +2,29 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Currency Rates</title>
+<title>Курсы валют</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>Currency Rates</h1>
+    <h1>Курсы валют</h1>
+
+    {% if latest_rate %}
+    <div id="latest-rate">
+        Актуальный курс на {{ latest_rate.date }}:
+        USD/RUB {{ "%.2f"|format(latest_rate.ust_rub) }},
+        CNY/RUB {{ "%.2f"|format(latest_rate.cny_rub) }}
+    </div>
+    {% endif %}
+
     <form id="range-form">
-        <label>From: <input type="date" id="from_date" name="from_date"></label>
-        <label>To: <input type="date" id="to_date" name="to_date"></label>
-        <button type="submit">Load</button>
+        <label>С: <input type="date" id="from_date" name="from_date" value="{{ from_date }}"></label>
+        <label>По: <input type="date" id="to_date" name="to_date" value="{{ to_date }}"></label>
+        <button type="submit">Загрузить</button>
     </form>
     <table>
         <thead>
             <tr>
-                <th>Date</th>
+                <th>Дата</th>
                 <th>USD/RUB</th>
                 <th>CNY/RUB</th>
                 <th>USD+1</th>
@@ -23,6 +32,15 @@
             </tr>
         </thead>
         <tbody id="rates-table-body">
+            {% for r in default_rates %}
+            <tr>
+                <td>{{ r.date }}</td>
+                <td>{{ "%.2f"|format(r.ust_rub) }}</td>
+                <td>{{ "%.2f"|format(r.cny_rub) }}</td>
+                <td>{{ "%.2f"|format(r.ust_rub_plus1) }}</td>
+                <td>{{ "%.2f"|format(r.cny_rub_plus2p) }}</td>
+            </tr>
+            {% endfor %}
         </tbody>
     </table>
     <script src="/static/script.js"></script>

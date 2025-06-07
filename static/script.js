@@ -10,7 +10,7 @@ form.addEventListener('submit', async (e) => {
 
     const resp = await fetch(`/rates?${params.toString()}`);
     if (!resp.ok) {
-        alert('Failed to load data');
+        alert('Не удалось загрузить данные');
         return;
     }
     const data = await resp.json();
@@ -20,10 +20,10 @@ form.addEventListener('submit', async (e) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${r.date}</td>
-            <td>${r.ust_rub}</td>
-            <td>${r.cny_rub}</td>
-            <td>${r.ust_rub_plus1}</td>
-            <td>${r.cny_rub_plus2p}</td>`;
+            <td>${r.ust_rub.toFixed(2)}</td>
+            <td>${r.cny_rub.toFixed(2)}</td>
+            <td>${r.ust_rub_plus1.toFixed(2)}</td>
+            <td>${r.cny_rub_plus2p.toFixed(2)}</td>`;
         tbody.appendChild(row);
     });
 });
