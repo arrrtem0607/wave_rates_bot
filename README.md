@@ -67,7 +67,7 @@ Example response:
 
 ## Bot Usage
 
-1. The bot automatically sends two messages at 09:00 MSK daily:
+1. The bot automatically sends two messages at 09:00 MSK on weekdays (Mon-Fri):
    - "Введите курс UST/RUB на сегодня"
    - "Введите курс CNY/RUB на сегодня"
 
