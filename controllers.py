@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from models import CurrencyRates
 
 class CurrencyController:
@@ -44,6 +44,11 @@ class CurrencyController:
         query = select(CurrencyRates).where(CurrencyRates.date == date)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
+
+    async def has_rates_for_date(self, date: date) -> bool:
+        query = select(func.count()).select_from(CurrencyRates).where(CurrencyRates.date == date)
+        result = await self.session.execute(query)
+        return result.scalar_one() > 0
 
     async def get_rates_range(self, from_date: Optional[date], to_date: Optional[date]):
         query = select(CurrencyRates)

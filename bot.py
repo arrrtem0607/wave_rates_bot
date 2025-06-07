@@ -58,9 +58,9 @@ async def handle_currency_message(message: Message):
 
     async with get_session() as session:
         controller = CurrencyController(session)
-        existing = await controller.get_rates_by_date(date.today())
+        has_today = await controller.has_rates_for_date(date.today())
 
-        if not rate_cache.get("requested") and existing is None:
+        if not rate_cache.get("requested") and not has_today:
             return
 
         try:
@@ -99,7 +99,7 @@ async def handle_currency_message(message: Message):
                 f"🇨🇳 CNY: <b>{cny_markup:.2f}₽</b>"
             )
 
-            if existing:
+            if has_today:
                 await message.reply("✅ Курсы обновлены.")
             else:
                 await message.reply("✅ Курсы получены и сохранены.")
