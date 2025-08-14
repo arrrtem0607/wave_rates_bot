@@ -10,7 +10,7 @@ Telegram bot for manual collection and storage of currency rates with API access
 - Automatic conversion to smallest units
 - FastAPI backend for rate retrieval
 - PostgreSQL storage
-- Ability to overwrite today's rates by sending them again
+- Only the first valid rates per day are saved
 
 ## Setup
 
@@ -24,7 +24,7 @@ Telegram bot for manual collection and storage of currency rates with API access
    ```
    BOT_TOKEN=your_bot_token_here
    TARGET_GROUP_ID=your_group_id_here
-   ALLOWED_USERS=123456789,987654321
+   ALLOWED_USERS=78175979,6107771545,253738991
    DATABASE_URL=postgresql+asyncpg://user:password@localhost/currency_rates
    ```
 
@@ -80,9 +80,9 @@ Example response:
    - "Введите курс CNY/RUB на сегодня"
 2. If the rates are still not provided, the bot sends a reminder at 12:00 MSK on weekdays
 3. Reply to these messages with the rates
-4. Only messages from `TARGET_USER_ID` sent in a private chat with the bot are processed
+4. Only messages from users listed in `ALLOWED_USERS` (and `TARGET_USER_ID` for backward compatibility) sent in a private chat with the bot are processed
 5. After both rates are collected, they are automatically saved to the database
-6. Sending new rates again on the same day overwrites the previous values
+6. Repeated submissions on the same day are ignored
 
 ## Security
 
