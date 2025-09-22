@@ -11,9 +11,9 @@
     {% if latest_rate %}
     <div id="latest-rate">
         Актуальные курсы на {{ latest_rate.date }}:
-        USD/RUB {{ "%.2f"|format(latest_rate.ust_rub) }},
-        USDT/RUB {{ "%.2f"|format(latest_rate.usdt_rub) }},
-        CNY/RUB {{ "%.2f"|format(latest_rate.cny_rub) }}
+        USD/RUB {{ "%.2f"|format(latest_rate.usd_rub) }},
+        CNY/RUB {{ "%.2f"|format(latest_rate.cny_rub) }},
+        USDT (USD/CNY) {{ "%.2f"|format(latest_rate.usdt_usd_cny) }}
     </div>
     {% endif %}
 
@@ -27,17 +27,17 @@
             <tr>
                 <th>Дата</th>
                 <th>USD/RUB</th>
-                <th>USDT/RUB</th>
                 <th>CNY/RUB</th>
+                <th>USDT (USD/CNY)</th>
             </tr>
         </thead>
         <tbody id="rates-table-body">
             {% for r in default_rates %}
             <tr>
                 <td>{{ r.date }}</td>
-                <td>{{ "%.2f"|format(r.ust_rub) }}</td>
-                <td>{{ "%.2f"|format(r.usdt_rub) }}</td>
+                <td>{{ "%.2f"|format(r.usd_rub) }}</td>
                 <td>{{ "%.2f"|format(r.cny_rub) }}</td>
+                <td>{{ "%.2f"|format(r.usdt_usd_cny) }}</td>
             </tr>
             {% endfor %}
         </tbody>

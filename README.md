@@ -4,13 +4,13 @@ Telegram bot for manual collection and storage of currency rates with API access
 
 ## Features
 
-- Daily automatic requests for UST/RUB and CNY/RUB rates
+- Daily automatic requests for USD/RUB, CNY/RUB and USDT (USD/CNY) values
 - Whitelist-based access control
 - Reply-based rate collection
 - Automatic conversion to smallest units
 - FastAPI backend for rate retrieval
 - PostgreSQL storage
-- Only the first valid rates per day are saved
+- Manual values can be updated throughout the day
 
 ## Setup
 
@@ -66,8 +66,9 @@ Example response:
 ```json
 {
   "date": "2025-05-21",
-  "ust_rub": 93.15,
+  "usd_rub": 93.15,
   "cny_rub": 12.85,
+  "usdt_usd_cny": 7.25,
   "ust_rub_plus1": 94.15,
   "cny_rub_plus2p": 13.107
 }
@@ -75,14 +76,12 @@ Example response:
 
 ## Bot Usage
 
-1. The bot automatically sends two messages at 09:00 MSK on weekdays (Mon-Fri):
-   - "Введите курс UST/RUB на сегодня"
-   - "Введите курс CNY/RUB на сегодня"
+1. The bot automatically sends a message at 10:00 MSK on weekdays (Mon-Fri) asking for three values: USD/RUB, CNY/RUB and USDT (USD/CNY)
 2. If the rates are still not provided, the bot sends a reminder at 12:00 MSK on weekdays
-3. Reply to these messages with the rates
+3. Reply to the message with three numbers on separate lines (USD/RUB, CNY/RUB, USDT (USD/CNY))
 4. Only messages from users listed in `ALLOWED_USERS` (and `TARGET_USER_ID` for backward compatibility) sent in a private chat with the bot are processed
-5. After both rates are collected, they are automatically saved to the database
-6. Repeated submissions on the same day are ignored
+5. After the values are collected, they are automatically saved to the database
+6. Repeated submissions on the same day overwrite the previous entry
 
 ## Security
 

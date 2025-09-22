@@ -2,7 +2,7 @@ import os
 import re
 import asyncio
 from datetime import date
-from decimal import Decimal, DivisionByZero, InvalidOperation
+from decimal import Decimal
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -60,8 +60,8 @@ MANAGER_CHAT_ID = int(os.getenv("MANAGER_CHAT_ID"))
 
 
 CURRENCY_PROMPT = (
-    "📥 Введите курсы USD, USDT и CNY (в рублях) тремя строками:\n\n"
-    "Пример:\n<code>93.15\n93.40\n12.85</code>"
+    "📥 Введите курсы USD/RUB, CNY/RUB и USDT (USD/CNY) тремя строками:\n\n"
+    "Пример:\n<code>93.15\n12.85\n7.25</code>"
 )
 
 
@@ -113,25 +113,20 @@ async def handle_currency_message(message: Message) -> None:
             logger.info(f"⚠️ Неверный формат от {message.from_user.id}: {message.text!r}")
             await message.reply(
                 "❌ Неверный формат. Введите три значения — например:\n"
-                "<code>93.15\n93.40\n12.85</code>"
+                "<code>93.15\n12.85\n7.25</code>"
             )
             return
 
-        usd_rate, usdt_rate, cny_rate = parsed
+        usd_rate, cny_rate, usdt_usd_cny = parsed
         usd_rate = usd_rate.quantize(Decimal("0.0001"))
-        usdt_rate = usdt_rate.quantize(Decimal("0.0001"))
         cny_rate = cny_rate.quantize(Decimal("0.0001"))
-
-        try:
-            usdt_cny_ratio = (usdt_rate / cny_rate).quantize(Decimal("0.01"))
-        except (InvalidOperation, DivisionByZero):
-            usdt_cny_ratio = None
+        usdt_usd_cny = usdt_usd_cny.quantize(Decimal("0.0001"))
 
         try:
             _, created = await controller.upsert_rates(
-                usd=usd_rate,
-                usdt=usdt_rate,
-                cny=cny_rate,
+                usd_rub=usd_rate,
+                cny_rub=cny_rate,
+                usdt_usd_cny=usdt_usd_cny,
                 date=date.today(),
             )
         except Exception as e:
@@ -148,10 +143,9 @@ async def handle_currency_message(message: Message) -> None:
         MANAGER_CHAT_ID,
         (
             f"<b>📊 Курсы на {date.today():%d.%m.%Y} (от {author}){header_suffix}:</b>\n\n"
-            f"🇺🇸 USD: <b>{usd_rate:.2f}₽</b>\n"
-            f"💠 USDT: <b>{usdt_rate:.2f}₽</b>\n"
-            f"🇨🇳 CNY: <b>{cny_rate:.2f}₽</b>\n"
-            + (f"🔁 USDT/CNY: <b>{usdt_cny_ratio:.2f}</b>\n" if usdt_cny_ratio is not None else "")
+            f"🇺🇸 USD/RUB: <b>{usd_rate:.2f}</b>\n"
+            f"🇨🇳 CNY/RUB: <b>{cny_rate:.2f}</b>\n"
+            f"💠 USDT (USD/CNY): <b>{usdt_usd_cny:.2f}</b>\n"
         ),
     )
     await message.reply(f"✅ Курсы {action}. Спасибо!")
