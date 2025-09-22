@@ -2,7 +2,7 @@ import os
 import re
 import asyncio
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, DivisionByZero, InvalidOperation
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -11,8 +11,6 @@ from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
-from sqlalchemy.exc import IntegrityError
-
 from database import get_session
 from controllers import CurrencyController
 from logger import setup_logger
@@ -62,8 +60,8 @@ MANAGER_CHAT_ID = int(os.getenv("MANAGER_CHAT_ID"))
 
 
 CURRENCY_PROMPT = (
-    "📥 Введите курс валют (USD и CNY) в две строки, с учётом вашей наценки:\n\n"
-    "Пример:\n<code>93.15\n12.85</code>"
+    "📥 Введите курс валют (USD, USDT и CNY) в три строки, с учётом вашей наценки:\n\n"
+    "Пример:\n<code>93.15\n93.55\n12.85</code>"
 )
 
 
@@ -92,9 +90,9 @@ async def check_repeat_request() -> None:
 # --- Helpers ---
 
 
-def _extract_two_decimals(text: str) -> tuple[Decimal, Decimal] | None:
+def _extract_three_decimals(text: str) -> tuple[Decimal, Decimal, Decimal] | None:
     matches = re.findall(r"[0-9]+(?:[.,][0-9]+)?", text)
-    if len(matches) != 2:
+    if len(matches) != 3:
         return None
     return tuple(Decimal(m.replace(",", ".")) for m in matches)
 
@@ -109,47 +107,61 @@ async def handle_currency_message(message: Message) -> None:
 
     async with get_session() as session:
         controller = CurrencyController(session)
-        if await controller.has_rates_for_date(date.today()):
-            logger.info(f"⛔ Повторный ввод от {message.from_user.id}")
-            await message.reply("ℹ️ Курсы на сегодня уже зафиксированы.")
-            return
 
-        pair = _extract_two_decimals(message.text)
-        if pair is None:
+        parsed = _extract_three_decimals(message.text)
+        if parsed is None:
             logger.info(f"⚠️ Неверный формат от {message.from_user.id}: {message.text!r}")
-            await message.reply("❌ Неверный формат. Введите два курса — например:\n<code>93.15 12.85</code>")
+            await message.reply(
+                "❌ Неверный формат. Введите три курса — например:\n"
+                "<code>93.15 93.55 12.85</code>"
+            )
             return
 
-        a, b = pair
-        usd_markup, cny_markup = max(a, b), min(a, b)
+        usd_markup, usdt_markup, cny_markup = parsed
+        usd_markup = usd_markup.quantize(Decimal("0.0001"))
+        usdt_markup = usdt_markup.quantize(Decimal("0.0001"))
+        cny_markup = cny_markup.quantize(Decimal("0.0001"))
+
         usd_base = (usd_markup - Decimal("1.00")).quantize(Decimal("0.0001"))
+        usdt_base = (usdt_markup - Decimal("1.00")).quantize(Decimal("0.0001"))
         cny_base = (cny_markup / Decimal("1.02")).quantize(Decimal("0.0001"))
+        try:
+            usdt_cny_ratio = (usdt_markup / cny_markup).quantize(Decimal("0.01"))
+        except (InvalidOperation, DivisionByZero):
+            usdt_cny_ratio = Decimal("0.00")
 
         try:
-            await controller.add_rates(ust=float(usd_base), cny=float(cny_base), date=date.today())
-        except IntegrityError:
-            await message.reply("ℹ️ Курсы на сегодня уже зафиксированы.")
-            return
+            _, created = await controller.upsert_rates(
+                usd=float(usd_base),
+                usdt=float(usdt_base),
+                cny=float(cny_base),
+                date=date.today(),
+            )
         except Exception as e:
             logger.warning(f"❌ Ошибка сохранения курсов от {message.from_user.id}: {e}")
             await message.reply("⚠️ Не удалось сохранить курсы.")
             return
 
-        logger.info(f"💾 Курсы сохранены от пользователя {message.from_user.id}")
+        action = "сохранены" if created else "обновлены"
+        logger.info(f"💾 Курсы {action} от пользователя {message.from_user.id}")
 
     author = (message.from_user.username and f"@{message.from_user.username}") or str(message.from_user.id)
+    header_suffix = "" if created else " (обновление)"
     await bot.send_message(
         MANAGER_CHAT_ID,
         (
-            f"<b>📊 Курсы на {date.today():%d.%m.%Y} (от {author}):</b>\n\n"
+            f"<b>📊 Курсы на {date.today():%d.%m.%Y} (от {author}){header_suffix}:</b>\n\n"
             f"🇺🇸 USD (введено): <b>{usd_markup:.2f}₽</b>\n"
-            f"🇨🇳 CNY (введено): <b>{cny_markup:.2f}₽</b>\n\n"
+            f"💠 USDT (введено): <b>{usdt_markup:.2f}₽</b>\n"
+            f"🇨🇳 CNY (введено): <b>{cny_markup:.2f}₽</b>\n"
+            f"🔁 USDT/CNY: <b>{usdt_cny_ratio:.2f}</b>\n\n"
             f"🧮 База:\n"
             f"• USD(base) = {usd_base:.4f}₽\n"
+            f"• USDT(base) = {usdt_base:.4f}₽\n"
             f"• CNY(base) = {cny_base:.4f}₽"
         ),
     )
-    await message.reply("✅ Курсы получены и сохранены. Спасибо!")
+    await message.reply(f"✅ Курсы {action}. Спасибо!")
 
 
 # --- Entry point ---
