@@ -20,9 +20,9 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 class CurrencyRatesResponse(BaseModel):
     date: date
-    ust_rub: float
-    usdt_rub: float
+    usd_rub: float
     cny_rub: float
+    usdt_usd_cny: float
 
     class Config:
         from_attributes = True
@@ -39,9 +39,9 @@ async def get_today_rates(session: AsyncSession = Depends(get_db_session)):
 
     return {
         "date": rates.date,
-        "ust_rub": rates.ust_rub_cents / 100,
-        "usdt_rub": rates.usdt_rub_cents / 100,
+        "usd_rub": rates.ust_rub_cents / 100,
         "cny_rub": rates.cny_rub_fens / 100,
+        "usdt_usd_cny": rates.usdt_rub_cents / 100,
     }
 
 
@@ -63,9 +63,9 @@ async def get_rates_by_date(
 
     return {
         "date": rates.date,
-        "ust_rub": rates.ust_rub_cents / 100,
-        "usdt_rub": rates.usdt_rub_cents / 100,
+        "usd_rub": rates.ust_rub_cents / 100,
         "cny_rub": rates.cny_rub_fens / 100,
+        "usdt_usd_cny": rates.usdt_rub_cents / 100,
     }
 
 
@@ -81,9 +81,9 @@ async def get_rates_range(
     return [
         {
             "date": r.date,
-            "ust_rub": r.ust_rub_cents / 100,
-            "usdt_rub": r.usdt_rub_cents / 100,
+            "usd_rub": r.ust_rub_cents / 100,
             "cny_rub": r.cny_rub_fens / 100,
+            "usdt_usd_cny": r.usdt_rub_cents / 100,
         }
         for r in result
     ]
@@ -98,9 +98,9 @@ async def index(request: Request, session: AsyncSession = Depends(get_db_session
     week_rates = [
         {
             "date": r.date,
-            "ust_rub": r.ust_rub_cents / 100,
-            "usdt_rub": r.usdt_rub_cents / 100,
+            "usd_rub": r.ust_rub_cents / 100,
             "cny_rub": r.cny_rub_fens / 100,
+            "usdt_usd_cny": r.usdt_rub_cents / 100,
         }
         for r in week_rates_models
     ]
@@ -110,9 +110,9 @@ async def index(request: Request, session: AsyncSession = Depends(get_db_session
     if latest:
         latest_data = {
             "date": latest.date,
-            "ust_rub": latest.ust_rub_cents / 100,
-            "usdt_rub": latest.usdt_rub_cents / 100,
+            "usd_rub": latest.ust_rub_cents / 100,
             "cny_rub": latest.cny_rub_fens / 100,
+            "usdt_usd_cny": latest.usdt_rub_cents / 100,
         }
 
     context = {

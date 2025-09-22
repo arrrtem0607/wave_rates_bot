@@ -13,27 +13,27 @@ class CurrencyController:
 
     async def upsert_rates(
         self,
-        usd: Decimal,
-        usdt: Decimal,
-        cny: Decimal,
+        usd_rub: Decimal,
+        cny_rub: Decimal,
+        usdt_usd_cny: Decimal,
         date: date,
     ) -> tuple[CurrencyRates, bool]:
-        usd = usd.quantize(Decimal("0.01"))
-        usdt = usdt.quantize(Decimal("0.01"))
-        cny = cny.quantize(Decimal("0.01"))
+        usd_rub = usd_rub.quantize(Decimal("0.01"))
+        cny_rub = cny_rub.quantize(Decimal("0.01"))
+        usdt_usd_cny = usdt_usd_cny.quantize(Decimal("0.01"))
 
-        usd_cents = int(usd * 100)
-        usdt_cents = int(usdt * 100)
-        cny_fens = int(cny * 100)
+        usd_cents = int(usd_rub * 100)
+        cny_fens = int(cny_rub * 100)
+        usdt_basis_points = int(usdt_usd_cny * 100)
 
         existing = await self.get_rates_by_date(date)
         if existing:
             existing.ust_rub_cents = usd_cents
-            existing.usdt_rub_cents = usdt_cents
             existing.cny_rub_fens = cny_fens
+            existing.usdt_rub_cents = usdt_basis_points
             existing.ust_rub_plus1_cents = usd_cents
-            existing.usdt_rub_plus1_cents = usdt_cents
             existing.cny_rub_plus2p_fens = cny_fens
+            existing.usdt_rub_plus1_cents = usdt_basis_points
 
             await self.session.commit()
             await self.session.refresh(existing)
@@ -42,11 +42,11 @@ class CurrencyController:
         rates = CurrencyRates(
             date=date,
             ust_rub_cents=usd_cents,
-            usdt_rub_cents=usdt_cents,
             cny_rub_fens=cny_fens,
+            usdt_rub_cents=usdt_basis_points,
             ust_rub_plus1_cents=usd_cents,
-            usdt_rub_plus1_cents=usdt_cents,
             cny_rub_plus2p_fens=cny_fens,
+            usdt_rub_plus1_cents=usdt_basis_points,
         )
 
         self.session.add(rates)

@@ -20,9 +20,9 @@ form.addEventListener('submit', async (e) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${r.date}</td>
-            <td>${r.ust_rub.toFixed(2)}</td>
-            <td>${r.usdt_rub.toFixed(2)}</td>
-            <td>${r.cny_rub.toFixed(2)}</td>`;
+            <td>${r.usd_rub.toFixed(2)}</td>
+            <td>${r.cny_rub.toFixed(2)}</td>
+            <td>${r.usdt_usd_cny.toFixed(2)}</td>`;
         tbody.appendChild(row);
     });
 });
