@@ -21,8 +21,10 @@ form.addEventListener('submit', async (e) => {
         row.innerHTML = `
             <td>${r.date}</td>
             <td>${r.ust_rub.toFixed(2)}</td>
+            <td>${r.usdt_rub.toFixed(2)}</td>
             <td>${r.cny_rub.toFixed(2)}</td>
             <td>${r.ust_rub_plus1.toFixed(2)}</td>
+            <td>${r.usdt_rub_plus1.toFixed(2)}</td>
             <td>${r.cny_rub_plus2p.toFixed(2)}</td>`;
         tbody.appendChild(row);
     });
