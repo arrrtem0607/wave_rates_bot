@@ -9,8 +9,13 @@ class CurrencyRates(Base):
     id = Column(Integer, primary_key=True)
     date = Column(Date, unique=True, nullable=False)
 
-    ust_rub_cents = Column(Integer, nullable=False)         # UST/RUB * 100
+    ust_rub_cents = Column(Integer, nullable=False)         # USD/RUB * 100
+    usdt_rub_cents = Column(Integer, nullable=False)        # USDT/RUB * 100
     cny_rub_fens = Column(Integer, nullable=False)          # CNY/RUB * 100
 
-    ust_rub_plus1_cents = Column(Integer, nullable=False)   # (UST+1) * 100
-    cny_rub_plus2p_fens = Column(Integer, nullable=False)   # (CNY*1.02) * 100 
+    # Legacy columns kept for compatibility with older dumps. They duplicate the
+    # manually введённые значения и синхронизируются контроллером.
+    ust_rub_plus1_cents = Column(Integer, nullable=False)
+    usdt_rub_plus1_cents = Column(Integer, nullable=False)
+    cny_rub_plus2p_fens = Column(Integer, nullable=False)
+

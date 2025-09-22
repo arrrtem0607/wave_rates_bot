@@ -21,9 +21,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 class CurrencyRatesResponse(BaseModel):
     date: date
     ust_rub: float
+    usdt_rub: float
     cny_rub: float
-    ust_rub_plus1: float
-    cny_rub_plus2p: float
 
     class Config:
         from_attributes = True
@@ -41,9 +40,8 @@ async def get_today_rates(session: AsyncSession = Depends(get_db_session)):
     return {
         "date": rates.date,
         "ust_rub": rates.ust_rub_cents / 100,
+        "usdt_rub": rates.usdt_rub_cents / 100,
         "cny_rub": rates.cny_rub_fens / 100,
-        "ust_rub_plus1": rates.ust_rub_plus1_cents / 100,
-        "cny_rub_plus2p": rates.cny_rub_plus2p_fens / 100
     }
 
 
@@ -66,9 +64,8 @@ async def get_rates_by_date(
     return {
         "date": rates.date,
         "ust_rub": rates.ust_rub_cents / 100,
+        "usdt_rub": rates.usdt_rub_cents / 100,
         "cny_rub": rates.cny_rub_fens / 100,
-        "ust_rub_plus1": rates.ust_rub_plus1_cents / 100,
-        "cny_rub_plus2p": rates.cny_rub_plus2p_fens / 100
     }
 
 
@@ -85,10 +82,10 @@ async def get_rates_range(
         {
             "date": r.date,
             "ust_rub": r.ust_rub_cents / 100,
+            "usdt_rub": r.usdt_rub_cents / 100,
             "cny_rub": r.cny_rub_fens / 100,
-            "ust_rub_plus1": r.ust_rub_plus1_cents / 100,
-            "cny_rub_plus2p": r.cny_rub_plus2p_fens / 100
-        } for r in result
+        }
+        for r in result
     ]
 
 
@@ -102,9 +99,8 @@ async def index(request: Request, session: AsyncSession = Depends(get_db_session
         {
             "date": r.date,
             "ust_rub": r.ust_rub_cents / 100,
+            "usdt_rub": r.usdt_rub_cents / 100,
             "cny_rub": r.cny_rub_fens / 100,
-            "ust_rub_plus1": r.ust_rub_plus1_cents / 100,
-            "cny_rub_plus2p": r.cny_rub_plus2p_fens / 100,
         }
         for r in week_rates_models
     ]
@@ -115,6 +111,7 @@ async def index(request: Request, session: AsyncSession = Depends(get_db_session
         latest_data = {
             "date": latest.date,
             "ust_rub": latest.ust_rub_cents / 100,
+            "usdt_rub": latest.usdt_rub_cents / 100,
             "cny_rub": latest.cny_rub_fens / 100,
         }
 

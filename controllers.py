@@ -1,37 +1,58 @@
 from typing import Optional
 from datetime import date
+from decimal import Decimal
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from sqlalchemy.exc import IntegrityError
+
 from models import CurrencyRates
 
 class CurrencyController:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add_rates(self, ust: float, cny: float, date: date) -> CurrencyRates:
-        ust_cents = int(ust * 100)
+    async def upsert_rates(
+        self,
+        usd: Decimal,
+        usdt: Decimal,
+        cny: Decimal,
+        date: date,
+    ) -> tuple[CurrencyRates, bool]:
+        usd = usd.quantize(Decimal("0.01"))
+        usdt = usdt.quantize(Decimal("0.01"))
+        cny = cny.quantize(Decimal("0.01"))
+
+        usd_cents = int(usd * 100)
+        usdt_cents = int(usdt * 100)
         cny_fens = int(cny * 100)
 
-        ust_plus1_cents = int((ust + 1) * 100)
-        cny_plus2p_fens = int((cny * 1.02) * 100)
+        existing = await self.get_rates_by_date(date)
+        if existing:
+            existing.ust_rub_cents = usd_cents
+            existing.usdt_rub_cents = usdt_cents
+            existing.cny_rub_fens = cny_fens
+            existing.ust_rub_plus1_cents = usd_cents
+            existing.usdt_rub_plus1_cents = usdt_cents
+            existing.cny_rub_plus2p_fens = cny_fens
+
+            await self.session.commit()
+            await self.session.refresh(existing)
+            return existing, False
 
         rates = CurrencyRates(
             date=date,
-            ust_rub_cents=ust_cents,
+            ust_rub_cents=usd_cents,
+            usdt_rub_cents=usdt_cents,
             cny_rub_fens=cny_fens,
-            ust_rub_plus1_cents=ust_plus1_cents,
-            cny_rub_plus2p_fens=cny_plus2p_fens,
+            ust_rub_plus1_cents=usd_cents,
+            usdt_rub_plus1_cents=usdt_cents,
+            cny_rub_plus2p_fens=cny_fens,
         )
 
         self.session.add(rates)
-        try:
-            await self.session.commit()
-        except IntegrityError:
-            await self.session.rollback()
-            raise
+        await self.session.commit()
         await self.session.refresh(rates)
-        return rates
+        return rates, True
 
     async def get_rates_by_date(self, date: date) -> CurrencyRates | None:
         query = select(CurrencyRates).where(CurrencyRates.date == date)
