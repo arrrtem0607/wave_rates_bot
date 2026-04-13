@@ -123,12 +123,8 @@ async def handle_currency_message(message: Message) -> None:
         cny_markup = cny_markup.quantize(Decimal("0.0001"))
 
         usd_base = (usd_markup - Decimal("1.00")).quantize(Decimal("0.0001"))
-        usdt_base = (usdt_markup - Decimal("1.00")).quantize(Decimal("0.0001"))
         cny_base = (cny_markup / Decimal("1.02")).quantize(Decimal("0.0001"))
-        try:
-            usdt_cny_ratio = (usdt_markup / cny_markup).quantize(Decimal("0.01"))
-        except (InvalidOperation, DivisionByZero):
-            usdt_cny_ratio = Decimal("0.00")
+        usdt_base = (usdt_markup - Decimal("1.00")).quantize(Decimal("0.0001"))
 
         try:
             _, created = await controller.upsert_rates(
@@ -151,14 +147,14 @@ async def handle_currency_message(message: Message) -> None:
         MANAGER_CHAT_ID,
         (
             f"<b>📊 Курсы на {date.today():%d.%m.%Y} (от {author}){header_suffix}:</b>\n\n"
-            f"🇺🇸 USD (введено): <b>{usd_markup:.2f}₽</b>\n"
-            f"💠 USDT (введено): <b>{usdt_markup:.2f}₽</b>\n"
-            f"🇨🇳 CNY (введено): <b>{cny_markup:.2f}₽</b>\n"
-            f"🔁 USDT/CNY: <b>{usdt_cny_ratio:.2f}</b>\n\n"
-            f"🧮 База:\n"
-            f"• USD(base) = {usd_base:.4f}₽\n"
-            f"• USDT(base) = {usdt_base:.4f}₽\n"
-            f"• CNY(base) = {cny_base:.4f}₽"
+            f"🇺🇸 USD: <b>{usd_markup:.2f}₽</b>\n"
+            f"🇨🇳 CNY: <b>{cny_markup:.2f}₽</b>\n"
+            f"💠 USDT: <b>{usdt_markup:.2f}₽</b>\n"
+            # f"🧮 База:\n"
+            # f"• USD(base) = {usd_base:.4f}₽\n"
+            # f"• CNY(base) = {cny_base:.4f}₽"
+            # f"• USDT(base) = {usdt_base:.4f}₽\n"
+
         ),
     )
     await message.reply(f"✅ Курсы {action}. Спасибо!")
